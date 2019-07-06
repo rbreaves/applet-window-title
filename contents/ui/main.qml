@@ -50,6 +50,26 @@ Item {
     Plasmoid.preferredRepresentation: Plasmoid.fullRepresentation
     Plasmoid.onFormFactorChanged: plasmoid.configuration.formFactor = plasmoid.formFactor;
 
+    PlasmaCore.DataSource {
+        id: executable
+        engine: "executable"
+        connectedSources: []
+        onNewData: {
+            var exitCode = data["exit code"]
+            var exitStatus = data["exit status"]
+            var stdout = data["stdout"]
+            var stderr = data["stderr"]
+            exited(sourceName, exitCode, exitStatus, stdout, stderr)
+            disconnectSource(sourceName) // cmd finished
+        }
+        function exec(cmd) {
+            if (cmd) {
+                connectSource(cmd)
+            }
+        }
+        signal exited(string cmd, int exitCode, int exitStatus, string stdout, string stderr)
+    }
+
     Plasmoid.status: {
         if (broadcaster.hiddenFromBroadcast && !inEditMode) {
             return PlasmaCore.Types.HiddenStatus;
@@ -81,18 +101,33 @@ Item {
 
     readonly property Item activeTaskItem: windowInfoLoader.item.activeTaskItem
 
+    function keyswap(appName){
+        if (appName == 'iTerm2' || appName == 'konsole') {
+            var cmd = '/usr/bin/setxkbmap -option'
+            executable.exec(cmd)
+        }
+        else{
+            var cmd = '/usr/bin/setxkbmap -option ctrl:swap_lwin_lctl'
+            executable.exec(cmd)
+        }
+    }
+
     readonly property string firstTitleText: {
         if (!activeTaskItem) {
             return "";
         }
 
         if (plasmoid.configuration.style === 0){ /*Application*/
+            keyswap(activeTaskItem.appName);
             return Tools.applySubstitutes(activeTaskItem.appName);
         } else if (plasmoid.configuration.style === 1){ /*Title*/
+            keyswap(activeTaskItem.appName);
             return activeTaskItem.title;
         } else if (plasmoid.configuration.style === 2){ /*ApplicationTitle*/
+            keyswap(activeTaskItem.appName);
             return Tools.applySubstitutes(activeTaskItem.appName);
         } else if (plasmoid.configuration.style === 3){ /*TitleApplication*/
+            keyswap(activeTaskItem.appName);
             var finalText = activeTaskItem.appName === activeTaskItem.title ?
                         Tools.applySubstitutes(activeTaskItem.appName) : activeTaskItem.title;
 
